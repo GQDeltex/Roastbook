@@ -204,4 +204,4 @@ if __name__ == '__main__':
     #c.execute("ALTER TABLE users DROP COLUMN level")
     c.execute("UPDATE users SET liked=', '")
     conn.commit()
-    app.run("0.0.0.0", port=80)
+    app.run("0.0.0.0")
