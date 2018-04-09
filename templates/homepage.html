@@ -1,0 +1,34 @@
+{% extends "main.html" %}
+{% block content %}
+<div class="w3-container w3-quarter w3-border w3-light-grey">
+    <p class="w3-center w3-grey w3-padding">Die Besten 25</p>
+    {% for user in top_user %}
+        <div class="w3-card w3-padding w3-margin w3-green">
+            <a href="{{ url_for('user', username=user[0]) }}">{{ user[0] }}<span class="w3-right">{{ user[1] }}</span></a>
+        </div>
+    {% endfor %}
+</div>
+<div class="w3-container w3-half w3-border w3-light-grey">
+    <p class="w3-center w3-grey w3-padding">Letzte Roasts</p>
+    {% for roast in top_post %}
+        <div class="w3-card w3-padding w3-margin w3-white">
+            <span class="w3-left">#{{ roast[0] }}</span>
+            <span class="w3-right">Von: <b><a href="{{ url_for('user', username=roast[4]) }}">{{ roast[4] }}</a></b></span></br>
+            <span class="w3-right">An: <b><a href="{{ url_for('user', username=roast[5]) }}">{{ roast[5] }}</a></b></span></br>
+            <p class="w3-panel w3-leftbar w3-serif w3-xlarge w3-light-grey">{{ roast[1] }}</p>
+            <div class="w3-container">
+                <div class="w3-green w3-half" style="width:{{ roast[7] }}%">{% if request.cookies.get("user") == roast[4] or not request.cookies.get("user") %}<span class="w3-button w3-green w3-quarter w3-left">{{ roast[2] }}&#x1F44D;</span>{% else %}<a href="{{ url_for('upvote') }}?id={{ roast[0] }}" class="w3-button w3-green w3-quarter w3-left">{{ roast[2] }}&#x1F44D;</a>{% endif %}</div>
+                <div class="w3-red w3-half" style="width:{{ roast[6] }}%">{% if request.cookies.get("user") == roast[4] or not request.cookies.get("user") %}<span class="w3-button w3-red w3-quarter w3-right">{{ roast[3] }}&#x1F44E;</span>{% else %}<a href="{{ url_for('downvote') }}?id={{ roast[0] }}" class="w3-button w3-red w3-quarter w3-right">{{ roast[3] }}&#x1F44E;</a>{% endif %}</div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+<div class="w3-container w3-quarter w3-border w3-light-grey">
+    <p class="w3-center w3-grey w3-padding">Die Schlechtesten 25</p>
+    {% for user in top_roast %}
+        <div class="w3-card w3-margin w3-padding w3-red">
+            <a href="{{ url_for('user', username=user[0]) }}">{{ user[0] }}<span class="w3-right">{{ user[1] }}</span></a>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

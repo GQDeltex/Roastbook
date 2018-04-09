@@ -1,0 +1,15 @@
+{% extends "main.html" %}
+{% block content %}
+ <form action="{{ url_for('register') }}" method="POST" class="w3-container w3-light-grey w3-border w3-margin w3-padding">
+
+<label>Benutzername</label>
+<input name="username" class="w3-input w3-border-0" type="text" required>
+<label>Passwort</label>
+<input name="password" class="w3-input w3-border-0" type="password" required>
+<label>Passwort wiederholen</label>
+<input name="password_repeat" class="w3-input w3-border-0" type="password" required>
+<p class="w3-text-red">{{ error }}</p>
+Wenn du dich registrierst akzeptierst du unsere <a href="{{ url_for('agb') }}">AGBs</a>
+<button class="w3-button w3-red w3-right w3-margin">Get Roasted!</button>
+</form>
+{% endblock content %}

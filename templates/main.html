@@ -1,0 +1,20 @@
+<html>
+<head>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+</head>
+<body>
+<div class="w3-container">
+    {% if not request.cookies.get("user") %}
+        <a class="w3-button w3-red w3-right w3-margin" href="{{ url_for('register') }}">Registrieren</a>
+    {% else %}
+        <a class="w3-button w3-green w3-right w3-margin" href="{{ url_for('user', username=request.cookies.get('user')) }}">Profil<a>
+    {% endif %}
+    <a class="w3-button w3-blue w3-right w3-margin" href="{{ url_for('login') }}">{% if request.cookies.get("user") %}Logout{% else %}Login{% endif %}</a>
+    <h2><a href="{{ url_for('index') }}">Roastbook &trade;</a></h2>
+</div>
+<div class="w3-container">
+    {% block content %}
+    {% endblock content %}
+</div>
+</body>
+</html>
