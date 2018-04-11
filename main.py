@@ -1,9 +1,18 @@
 # -*- coding: cp1252 -*-
-from flask import Flask, request, redirect, url_for, render_template, make_response
+from flask import Flask, request, redirect, url_for, render_template, make_response, Markup
 import sqlite3
 import json
+import hashlib
 
 app = Flask(__name__)
+conn = sqlite3.connect("./data.sqlite3")
+c = conn.cursor()
+#c.execute("DROP TABLE users")
+#c.execute("CREATE TABLE users (username VARCHAR(20), password VARCHAR(20), balance INT, level INT, liked TEXT, PRIMARY KEY(username))")
+#c.execute("DROP TABLE posts")
+#c.execute("CREATE TABLE posts (id INT, content TEXT, upvote INT, downvote INT, user VARCHAR(20), roasted VARCHAR(20), PRIMARY KEY(id))")
+#c.execute("UPDATE users SET liked=', '")
+conn.commit()
 
 @app.route("/")
 def index():
@@ -46,12 +55,14 @@ def login():
         username = request.form["username"]
         password = request.form["password"]
         try:
-            data = list(get_data("SELECT * FROM users WHERE username='%s'" % username)[0])
+            data = list(get_data("SELECT * FROM users WHERE username=?", username)[0])
         except:
             error = "Dich gibts anscheinen ned oder du bischt zu dumm zum tippen"
         else:
-            print(data)
-            if data[1] == password:
+            pwd_hash = hashlib.sha256(username + password).hexdigest()
+            #print "ORIG:\t" + str(data[1])
+            #print "NEW:\t" + str(pwd_hash)
+            if data[1] == pwd_hash:
                 resp = make_response(redirect(url_for("user", username=username)))
                 resp.set_cookie("user", value=username)
                 return resp
@@ -68,7 +79,7 @@ def login():
 def register():
     error = ""
     if request.method == "POST":
-        username = request.form["username"]
+        username = Markup.escape(request.form["username"])
         password = request.form["password"]
         password_repeat = request.form["password_repeat"]
         data = getuser(username)
@@ -77,7 +88,8 @@ def register():
         elif password != password_repeat:
             error = "Dein Passwort isch verdraeht!"
         else:
-            c.execute("INSERT INTO users (username, password, balance, level) VALUES ('%s', '%s', %d, %d)" % (username, password, 0, 0))
+            pwd_hash = hashlib.sha256(username + password).hexdigest()
+            c.execute("INSERT INTO users (username, password, balance, level) VALUES (?, ?, ?, ?)", (username, pwd_hash, 0, 0))
             conn.commit()
             resp = make_response(redirect(url_for("user", username=username)))
             resp.set_cookie("user", value=username)
@@ -88,7 +100,7 @@ def register():
 def user(username):
     data = getuser(username)
     if data != None:
-        posts_raw = get_data("SELECT * FROM posts WHERE user='%s'OR roasted='%s' ORDER BY id DESC" % (username, username))
+        posts_raw = get_data("SELECT * FROM posts WHERE user=? OR roasted=? ORDER BY id DESC", (username, username))
         posts = []
         for item in posts_raw:
             item = list(item)
@@ -116,8 +128,8 @@ def user(username):
 def upvote():
     id = int(request.args.get("id"))
     source = request.args.get("source", default=url_for("index"))
-    username, upvote, = get_data("SELECT user, upvote FROM posts WHERE id=%d" % int(id))[0]
-    balance,liked, = get_data("SELECT balance,liked FROM users WHERE username='%s'" % str(username))[0]
+    username, upvote, = get_data("SELECT user, upvote FROM posts WHERE id=?", int(id))[0]
+    balance,liked, = get_data("SELECT balance,liked FROM users WHERE username=?", str(username))[0]
     if liked != None:
         if liked.find(", " + str(id) + ", ") != -1:
             return redirect(source)
@@ -128,9 +140,9 @@ def upvote():
     balance += 1
     upvote += 1
     print ("Balance of %s changed from %d to %d" % (username, balance-1, balance))
-    c.execute("UPDATE users SET balance=%d WHERE username='%s'" % (balance, username))
-    c.execute("UPDATE users SET liked='%s' WHERE username='%s'" % (liked, username))
-    c.execute("UPDATE posts SET upvote=%d WHERE id=%d" % (upvote, id))
+    c.execute("UPDATE users SET balance=? WHERE username=?", (balance, username))
+    c.execute("UPDATE users SET liked=? WHERE username=?", (liked, username))
+    c.execute("UPDATE posts SET upvote=? WHERE id=?", (upvote, id))
     conn.commit()
     return redirect(source)
 
@@ -138,8 +150,8 @@ def upvote():
 def downvote():
     id = int(request.args.get("id"))
     source = request.args.get("source", default=url_for("index"))
-    username, downvote = get_data("SELECT user,downvote FROM posts WHERE id=%d" % int(id))[0]
-    balance,liked, = get_data("SELECT balance,liked FROM users WHERE username='%s'" % str(username))[0]
+    username, downvote = get_data("SELECT user,downvote FROM posts WHERE id=?", int(id))[0]
+    balance,liked, = get_data("SELECT balance,liked FROM users WHERE username=?", str(username))[0]
     if liked != None:
         if liked.find(", " + str(id) + ", ") != -1:
             return redirect(source)
@@ -150,24 +162,24 @@ def downvote():
     balance -= 1
     downvote += 1
     print ("Balance of %s changed from %d to %d" % (username, balance+1, balance))
-    c.execute("UPDATE users SET balance=%d WHERE username='%s'" % (balance, username))
-    c.execute("UPDATE users SET liked='%s' WHERE username='%s'" % (liked, username))
-    c.execute("UPDATE posts SET downvote=%d WHERE id=%d" % (downvote, id))
+    c.execute("UPDATE users SET balance=? WHERE username=?", (balance, username))
+    c.execute("UPDATE users SET liked=? WHERE username=?", (liked, username))
+    c.execute("UPDATE posts SET downvote=? WHERE id=?", (downvote, id))
     conn.commit()
     return redirect(source)
 
 @app.route("/newpost", methods=["POST"])
 def newpost():
-    text = request.form['text']
+    text = Markup.escape(request.form['text'])
     username = request.form['username']
     print(username)
     my_username = request.cookies.get("user")
-    if get_data("SELECT username FROM users WHERE username='%s'" % username):
+    if get_data("SELECT username FROM users WHERE username=?", username):
         try:
             id, = get_data("SELECT id FROM posts ORDER BY id DESC LIMIT 1")[0]
         except:
             id = 0
-        c.execute("INSERT INTO posts (id, content, upvote, downvote, user, roasted) VALUES (%d, '%s', 0, 0, '%s', '%s')" % (id+1, text, my_username, username))
+        c.execute("INSERT INTO posts (id, content, upvote, downvote, user, roasted) VALUES (?, ?, 0, 0, ?, ?)", (id+1, text, my_username, username))
         conn.commit()
         return redirect(url_for('user', username=my_username))
 
@@ -175,16 +187,24 @@ def newpost():
 def agb():
     return render_template("agb.html")
 
-@app.route("/viewall")
-def viewall():
-    return str(get_data("SELECT * FROM users")) + "<hr>" + str(get_data("SELECT * FROM posts"))
-
-def get_data(query):
-    data = c.execute(query)
+def get_data(query, args=""):
+    if type(args) != tuple:
+        print "Args is not tuple"
+        print "Type: " + str(type(args))
+        print args
+        if args != "":
+            adding = (str(args), )
+        else:
+            adding = ""
+    else:
+        adding = args
+    print str(adding)
+    data = c.execute(query, adding)
     return data.fetchall()
 
 def getuser(username):
-    query = c.execute("SELECT * FROM users WHERE username='%s'" % str(username))
+    print username
+    query = c.execute("SELECT * FROM users WHERE username=?", (username, ))
     data = query.fetchall()
     #print data
     if data == []:
@@ -193,15 +213,4 @@ def getuser(username):
         return list(data[0])
 
 if __name__ == '__main__':
-    conn = sqlite3.connect("./data.sqlite3")
-    c = conn.cursor()
-    #c.execute("DROP TABLE users")
-    #c.execute("CREATE TABLE users (username VARCHAR(20), password VARCHAR(20), balance INT, liked TEXT, PRIMARY KEY(username))")
-    #c.execute("INSERT INTO users (username, password, balance, level) VALUES ('gqdeltex', 'nopass', 0, 0)")
-    #c.execute("DROP TABLE posts")
-    #c.execute("CREATE TABLE posts (id INT, content TEXT, upvote INT, downvote INT, user VARCHAR(20), roasted VARCHAR(20), PRIMARY KEY(id))")
-    #c.execute("INSERT INTO posts (id, content, upvote, downvote, user, roasted) VALUES (0, 'Asshole', 5, 3, 'gqdeltex', 'NotInteresting')")
-    #c.execute("ALTER TABLE users DROP COLUMN level")
-    c.execute("UPDATE users SET liked=', '")
-    conn.commit()
-    app.run("0.0.0.0")
+    app.run("0.0.0.0", port=80)
