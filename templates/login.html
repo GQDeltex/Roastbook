@@ -2,10 +2,10 @@
 {% block content %}
  <form class="w3-container w3-light-grey w3-border w3-margin w3-padding" action="{{ url_for('login') }}" method="POST">
 
-<label>Benutzername</label>
-<input name="username" class="w3-input w3-border-0" type="text" required>
-<label>Passwort</label>
-<input name="password" class="w3-input w3-border-0" type="password" required>
+<label>Benutzername (erlaubte Buchstaben: a-zA-Z0-9!@#$%^*_| )</label>
+<input name="username" class="w3-input w3-border-0" type="text" pattern="[a-zA-Z0-9!@#$%^*_|]{0,20}" required>
+<label>Passwort (erlaubte Buchstaben: a-zA-Z0-9!@#$%^*_| )</label>
+<input name="password" class="w3-input w3-border-0" type="password" pattern="[a-zA-Z0-9!@#$%^*_|]{5,20}" required>
 <p class="w3-text-red">{{ error }}</p>
 <button class="w3-button w3-blue w3-right w3-margin">Start Roasting</button>
 </form>

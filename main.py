@@ -1,4 +1,4 @@
-# -*- coding: cp1252 -*-
+ # -*- coding: utf-8 -*-
 from flask import Flask, request, redirect, url_for, render_template, make_response, Markup
 import sqlite3
 import json
@@ -12,19 +12,19 @@ c = conn.cursor()
 #c.execute("DROP TABLE posts")
 #c.execute("CREATE TABLE posts (id INT, content TEXT, upvote INT, downvote INT, user VARCHAR(20), roasted VARCHAR(20), PRIMARY KEY(id))")
 #c.execute("UPDATE users SET liked=', '")
-conn.commit()
+#conn.commit()
 
 @app.route("/")
 def index():
     top_user_raw = get_data("SELECT username, balance FROM users ORDER BY balance DESC LIMIT 25")
     top_user = []
     for item in top_user_raw:
-        top_user.append([str(list(item)[0]), str(list(item)[1])])
+        top_user.append([(list(item)[0]), str(list(item)[1])])
     #print("Top Users: " + str(top_user))
     top_roast_raw = get_data("SELECT username, balance FROM users ORDER BY balance ASC LIMIT 25")
     top_roast = []
     for item in top_roast_raw:
-        top_roast.append([str(list(item)[0]), str(list(item)[1])])
+        top_roast.append([(list(item)[0]), str(list(item)[1])])
     #print("Top Roasted: " + str(top_roast))
     top_post_raw = get_data("SELECT * FROM posts ORDER BY id DESC LIMIT 100")
     top_post = []
@@ -56,12 +56,13 @@ def login():
         password = request.form["password"]
         try:
             data = list(get_data("SELECT * FROM users WHERE username=?", username)[0])
-        except:
+        except Exception as e:
             error = "Dich gibts anscheinen ned oder du bischt zu dumm zum tippen"
+            print e
         else:
             pwd_hash = hashlib.sha256(username + password).hexdigest()
-            #print "ORIG:\t" + str(data[1])
-            #print "NEW:\t" + str(pwd_hash)
+            #print ("ORIG:\t" + str(data[1]))
+            #print ("NEW:\t" + str(pwd_hash))
             if data[1] == pwd_hash:
                 resp = make_response(redirect(url_for("user", username=username)))
                 resp.set_cookie("user", value=username)
@@ -84,6 +85,7 @@ def register():
         password_repeat = request.form["password_repeat"]
         data = getuser(username)
         if data != None:
+            print data
             error = "!!!!!!You shall not pass!!!!!!!"
         elif password != password_repeat:
             error = "Dein Passwort isch verdraeht!"
@@ -91,6 +93,7 @@ def register():
             pwd_hash = hashlib.sha256(username + password).hexdigest()
             c.execute("INSERT INTO users (username, password, balance, level) VALUES (?, ?, ?, ?)", (username, pwd_hash, 0, 0))
             conn.commit()
+            print ("New User: " + username)
             resp = make_response(redirect(url_for("user", username=username)))
             resp.set_cookie("user", value=username)
             return resp
@@ -136,7 +139,8 @@ def upvote():
     else:
         liked = ", "
     liked += (str(id) + ", ")
-    print liked
+    #print (str(liked))
+    print (str(username) + " liked post nr. " + str(id))
     balance += 1
     upvote += 1
     print ("Balance of %s changed from %d to %d" % (username, balance-1, balance))
@@ -158,7 +162,8 @@ def downvote():
     else:
         liked = ", "
     liked += (str(id) + ", ")
-    print liked
+    #print str(liked)
+    print (str(username) + " disliked post nr. " + str(id))
     balance -= 1
     downvote += 1
     print ("Balance of %s changed from %d to %d" % (username, balance+1, balance))
@@ -172,7 +177,7 @@ def downvote():
 def newpost():
     text = Markup.escape(request.form['text'])
     username = request.form['username']
-    print(username)
+    print("Created Post:" + str(username))
     my_username = request.cookies.get("user")
     if get_data("SELECT username FROM users WHERE username=?", username):
         try:
@@ -189,21 +194,21 @@ def agb():
 
 def get_data(query, args=""):
     if type(args) != tuple:
-        print "Args is not tuple"
-        print "Type: " + str(type(args))
-        print args
+        #print ("Args is not tuple")
+        #print ("Type: " + str(type(args)))
+        #print (str(args))
         if args != "":
             adding = (str(args), )
         else:
             adding = ""
     else:
         adding = args
-    print str(adding)
+    #print (str(adding))
     data = c.execute(query, adding)
     return data.fetchall()
 
 def getuser(username):
-    print username
+    #print (str(username))
     query = c.execute("SELECT * FROM users WHERE username=?", (username, ))
     data = query.fetchall()
     #print data

@@ -25,7 +25,7 @@
         <label>Roast</label>
         <input name="text" class="w3-input w3-border-0" type="text" required placeholder="Deinen Roast bitte.....">
         <label>Name</label>
-        <input class="w3-input w3-border-0" type="text" onkeyup="update_names(this)" placeholder="Tippen für vorschläge">
+        <input class="w3-input w3-border-0" type="text" onkeyup="update_names(this)" placeholder="Tippen für vorschläge" pattern="[a-zA-Z0-9!@#$%^*_|]{0,20}">
         <select id="name_select" class="w3-select w3-border-0" name="username" required>
         </select>
         <button class="w3-button w3-green w3-right w3-margin">Roaste ihn!</button>
