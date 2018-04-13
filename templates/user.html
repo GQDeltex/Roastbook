@@ -43,6 +43,9 @@
                 <div class="w3-green w3-half" style="width:{{ roast[7] }}%">{% if request.cookies.get("user") == roast[4] or not request.cookies.get("user") %}<span class="w3-button w3-green w3-quarter w3-left">{{ roast[2] }}&#x1F44D;</span>{% else %}<a href="{{ url_for('upvote') }}?id={{ roast[0] }}&source={{ url_for('user', username=user[0]) }}" class="w3-button w3-green w3-quarter w3-left">{{ roast[2] }}&#x1F44D;</a>{% endif %}</div>
                 <div class="w3-red w3-half" style="width:{{ roast[6] }}%">{% if request.cookies.get("user") == roast[4] or not request.cookies.get("user") %}<span class="w3-button w3-red w3-quarter w3-right">{{ roast[3] }}&#x1F44E;</span>{% else %}<a href="{{ url_for('downvote') }}?id={{ roast[0] }}&source={{ url_for('user', username=user[0]) }}" class="w3-button w3-red w3-quarter w3-right">{{ roast[3] }}&#x1F44E;</a>{% endif %}</div>
             </div>
+            {% if request.cookies.get("user") == roast[4] %}<a href="{{ url_for('edit_post', id=roast[0]) }}">Post editieren</a>{% endif %}
+            <a onclick="alert('Noch nicht implementiert :(')" class="w3-right">Post melden</a>
+            <br>
         </div>
     {% endfor %}
 </div>

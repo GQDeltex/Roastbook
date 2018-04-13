@@ -85,7 +85,7 @@ def register():
         password_repeat = request.form["password_repeat"]
         data = getuser(username)
         if data != None:
-            print data
+            print (data)
             error = "!!!!!!You shall not pass!!!!!!!"
         elif password != password_repeat:
             error = "Dein Passwort isch verdraeht!"
@@ -127,8 +127,24 @@ def user(username):
     else:
         return "Diesen Benutzer gibt es nicht!"
 
+@app.route("/edit_post/<id>", methods=["GET", "POST"])
+def edit_post(id):
+    data = get_data("SELECT * FROM posts WHERE id=?", id)[0]
+    if request.cookies.get("user") != data[4]:
+        return "You are not allowed to do this!\r\n<a href='" + url_for('index') + "'>Back to Homepage</a>"
+    if request.method == "POST":
+        text = Markup.escape(request.form['text'])
+        c.execute("UPDATE posts SET content=? WHERE id=?", (text, id))
+        conn.commit()
+        return redirect(url_for('user', username=request.cookies.get("user")))
+    else:
+        return render_template("edit.html", data=data)
+
+
 @app.route("/upvote")
 def upvote():
+    if request.cookies.get("user") != "":
+        return "You are not allowed to do this!\r\n<a href='" + url_for('index') + "'>Back to Homepage</a>"
     id = int(request.args.get("id"))
     source = request.args.get("source", default=url_for("index"))
     username, upvote, = get_data("SELECT user, upvote FROM posts WHERE id=?", int(id))[0]
@@ -152,6 +168,8 @@ def upvote():
 
 @app.route("/downvote")
 def downvote():
+    if request.cookies.get("user") != "":
+        return "You are not allowed to do this!\r\n<a href='" + url_for('index') + "'>Back to Homepage</a>"
     id = int(request.args.get("id"))
     source = request.args.get("source", default=url_for("index"))
     username, downvote = get_data("SELECT user,downvote FROM posts WHERE id=?", int(id))[0]
