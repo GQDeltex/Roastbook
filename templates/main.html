@@ -2,16 +2,67 @@
 <head>
     <link rel="stylesheet" href="{{ url_for('static', filename='w3.css') }}">
     <meta charset="UTF-8">
+    <script>
+        var w = window,
+        d = document,
+        e = d.documentElement,
+        g = d.getElementsByTagName('body')[0],
+        x = w.innerWidth || e.clientWidth || g.clientWidth,
+        y = w.innerHeight|| e.clientHeight|| g.clientHeight;
+
+        function sidebar_open() {
+            sdb = document.getElementById("sidebar")
+            if (x > 601){
+                sdb.style.width = "25%"
+            } else {
+                sdb.style.width = "100%"
+            }
+            sdb.style.display = "block"
+        }
+
+        function sidebar_close() {
+            document.getElementById("sidebar").style.display = "none"
+        }
+
+        function open_tab(tab_name){
+            var i, g
+            g = document.getElementsByClassName("tab")
+            console.log("All Tabs:")
+            console.log(g);
+            for (i = 0; i < g.length; i++) {
+                g[i].style.display = "none"
+            }
+            g = document.getElementsByClassName(tab_name)
+            console.log("Tabs to render:")
+            console.log(g);
+            for (i = 0; i < g.length; i++) {
+                g[i].style.display = "block"
+            }
+            document.getElementById("sidebar").style.display = "none"
+        }
+    </script>
 </head>
 <body>
+<div class="w3-sidebar w3-bar-block w3-card w3-animate-left" style="display:none" id="sidebar">
+    <button onclick="sidebar_close()" class="w3-bar-item w3-button w3-large">Close &times;</button>
+    <a href="{{ url_for('index') }}" class="w3-bar-item w3-button">Home</a>
+    {% if request.cookies.get("user") %}
+    <a href="{{ url_for('user', username=request.cookies.get('user')) }}" class="w3-bar-item w3-button">Profil</a>
+    {% else %}
+    <a class="w3-bar-item w3-button" href="{{ url_for('login') }}">Login</a>
+    {% endif %}
+    <a onclick="open_tab('posts')" class="w3-hide-large w3-hide-medium w3-bar-item w3-button">Posts</a>
+    <a onclick="open_tab('ranking')" class="w3-hide-large w3-hide-medium w3-bar-item w3-button">Ranking</a>
+    <a href="{{ url_for('agb') }}" class="w3-bar-item w3-button">AGB</a>
+    <a href="{{ url_for('impressum') }}" class="w3-bar-item w3-button">Impressum</a>
+    <a href="{{ url_for('datenschutz') }}" class="w3-bar-item w3-button">Datenschutzerklärung</a>
+</div>
 <div class="w3-container">
+
     {% if not request.cookies.get("user") %}
         <a class="w3-button w3-red w3-right w3-margin" href="{{ url_for('register') }}">Registrieren</a>
-    {% else %}
-        <a class="w3-button w3-green w3-right w3-margin" href="{{ url_for('user', username=request.cookies.get('user')) }}">Profil<a>
     {% endif %}
-    <a class="w3-button w3-blue w3-right w3-margin" href="{{ url_for('login') }}">{% if request.cookies.get("user") %}Logout{% else %}Login{% endif %}</a>
-    <h2><a href="{{ url_for('index') }}">Roastbook &trade;</a></h2>
+    <h2><a onclick="sidebar_open()">☰</a> <a href="{{ url_for('index') }}">Roastbook &trade;</a></h2>
 </div>
 <div class="w3-container">
     {% block content %}

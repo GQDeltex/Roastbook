@@ -16,7 +16,7 @@
             }
         }
     </script>
-    <h2>Profil:</h2>
+    <h2>Profil:{% if request.cookies.get("user") %}<a class="w3-button w3-blue w3-right w3-large" href="{{ url_for('login') }}">Logout</a>{% endif %}</h2>
     <h2 class="w3-serif w3-dark-grey w3-padding w3-text-white"> {{ user[0] }}</h2>
     <p>Balance: {{ user[2] }}</p>
     <p>Level: {{ user[3] }}</p>

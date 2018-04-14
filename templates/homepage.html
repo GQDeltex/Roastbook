@@ -1,6 +1,14 @@
 {% extends "main.html" %}
 {% block content %}
-<div class="w3-container w3-quarter w3-border w3-light-grey">
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log(x + " x " + y);
+        if (x < 601) {
+            open_tab('posts')
+        }
+    }, false);
+</script>
+<div class="w3-container w3-quarter w3-border w3-light-grey tab ranking">
     <p class="w3-center w3-grey w3-padding">Die Besten 25</p>
     {% for user in top_user %}
         <div class="w3-card w3-padding w3-margin w3-green">
@@ -8,7 +16,7 @@
         </div>
     {% endfor %}
 </div>
-<div class="w3-container w3-half w3-border w3-light-grey">
+<div class="w3-container w3-half w3-border w3-light-grey tab posts">
     <p class="w3-center w3-grey w3-padding">Letzte Roasts</p>
     {% for roast in top_post %}
         <div class="w3-card w3-padding w3-margin w3-white">
@@ -26,7 +34,7 @@
         </div>
     {% endfor %}
 </div>
-<div class="w3-container w3-quarter w3-border w3-light-grey">
+<div class="w3-container w3-quarter w3-border w3-light-grey tab ranking">
     <p class="w3-center w3-grey w3-padding">Die Schlechtesten 25</p>
     {% for user in top_roast %}
         <div class="w3-card w3-margin w3-padding w3-red">

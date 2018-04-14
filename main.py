@@ -210,6 +210,14 @@ def newpost():
 def agb():
     return render_template("agb.html")
 
+@app.route("/impressum")
+def impressum():
+    return render_template("impressum.html")
+
+@app.route("/datenschutz")
+def datenschutz():
+    return render_template("datenschutz.html")
+
 def get_data(query, args=""):
     if type(args) != tuple:
         #print ("Args is not tuple")
