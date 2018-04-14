@@ -134,10 +134,6 @@ def edit_post(id):
         return "You are not allowed to do this!\r\n<a href='" + url_for('index') + "'>Back to Homepage</a>"
     if request.method == "POST":
         text = Markup.escape(request.form['text'])
-        remove = request.form['remove']
-        print remove
-        if remove == "true":
-            c.execute("DELETE FROM posts WHERE id=?", id)
         c.execute("UPDATE posts SET content=? WHERE id=?", (text, id))
         conn.commit()
         return redirect(url_for('user', username=request.cookies.get("user")))
