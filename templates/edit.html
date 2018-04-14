@@ -7,6 +7,10 @@
 <br>
 <label>Text</label>
 <input name="text" class="w3-input w3-border-0" type="text" required value="{{ data[1] }}">
-<button class="w3-button w3-blue w3-right w3-margin">Update Post</button>
+<div class="w3-red w3-padding w3-margin w3-quarter">
+    <input type="checkbox" name="remove" value="true">
+    Remove?
+</div>
+<button class="w3-button w3-yellow w3-right w3-margin">Update Post</button>
 </form>
 {% endblock content %}

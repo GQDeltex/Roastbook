@@ -134,6 +134,10 @@ def edit_post(id):
         return "You are not allowed to do this!\r\n<a href='" + url_for('index') + "'>Back to Homepage</a>"
     if request.method == "POST":
         text = Markup.escape(request.form['text'])
+        remove = request.form['remove']
+        print remove
+        if remove == "true":
+            c.execute("DELETE FROM posts WHERE id=?", id)
         c.execute("UPDATE posts SET content=? WHERE id=?", (text, id))
         conn.commit()
         return redirect(url_for('user', username=request.cookies.get("user")))
@@ -143,7 +147,7 @@ def edit_post(id):
 
 @app.route("/upvote")
 def upvote():
-    if request.cookies.get("user") != "":
+    if request.cookies.get("user") == "":
         return "You are not allowed to do this!\r\n<a href='" + url_for('index') + "'>Back to Homepage</a>"
     id = int(request.args.get("id"))
     source = request.args.get("source", default=url_for("index"))
@@ -168,7 +172,7 @@ def upvote():
 
 @app.route("/downvote")
 def downvote():
-    if request.cookies.get("user") != "":
+    if request.cookies.get("user") == "":
         return "You are not allowed to do this!\r\n<a href='" + url_for('index') + "'>Back to Homepage</a>"
     id = int(request.args.get("id"))
     source = request.args.get("source", default=url_for("index"))
