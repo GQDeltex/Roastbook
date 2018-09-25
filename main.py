@@ -148,7 +148,8 @@ def upvote():
     id = int(request.args.get("id"))
     source = request.args.get("source", default=url_for("index"))
     username, upvote, = get_data("SELECT user, upvote FROM posts WHERE id=?", int(id))[0]
-    balance,liked, = get_data("SELECT balance,liked FROM users WHERE username=?", str(username))[0]
+    balance, = get_data("SELECT balance FROM users WHERE username=?", str(username))[0]
+    liked, = get_data("SELECT liked FROM users WHERE username=?", str(request.cookies.get("user")))[0]
     if liked != None:
         if liked.find(", " + str(id) + ", ") != -1:
             return redirect(source)
@@ -161,7 +162,7 @@ def upvote():
     upvote += 1
     print ("Balance of %s changed from %d to %d" % (username, balance-1, balance))
     c.execute("UPDATE users SET balance=? WHERE username=?", (balance, username))
-    c.execute("UPDATE users SET liked=? WHERE username=?", (liked, username))
+    c.execute("UPDATE users SET liked=? WHERE username=?", (liked, request.cookies.get("user")))
     c.execute("UPDATE posts SET upvote=? WHERE id=?", (upvote, id))
     conn.commit()
     return redirect(source)
@@ -172,8 +173,9 @@ def downvote():
         return "You are not allowed to do this!\r\n<a href='" + url_for('index') + "'>Back to Homepage</a>"
     id = int(request.args.get("id"))
     source = request.args.get("source", default=url_for("index"))
-    username, downvote = get_data("SELECT user,downvote FROM posts WHERE id=?", int(id))[0]
-    balance,liked, = get_data("SELECT balance,liked FROM users WHERE username=?", str(username))[0]
+    username, downvote, = get_data("SELECT user, downvote FROM posts WHERE id=?", int(id))[0]
+    balance, = get_data("SELECT balance FROM users WHERE username=?", str(username))[0]
+    liked, = get_data("SELECT liked FROM users WHERE username=?", str(request.cookies.get("user")))[0]
     if liked != None:
         if liked.find(", " + str(id) + ", ") != -1:
             return redirect(source)
@@ -186,7 +188,7 @@ def downvote():
     downvote += 1
     print ("Balance of %s changed from %d to %d" % (username, balance+1, balance))
     c.execute("UPDATE users SET balance=? WHERE username=?", (balance, username))
-    c.execute("UPDATE users SET liked=? WHERE username=?", (liked, username))
+    c.execute("UPDATE users SET liked=? WHERE username=?", (liked, request.cookies.get("user")))
     c.execute("UPDATE posts SET downvote=? WHERE id=?", (downvote, id))
     conn.commit()
     return redirect(source)
