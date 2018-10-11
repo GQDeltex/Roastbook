@@ -61,9 +61,9 @@
 <div class="w3-container">
 
     {% if not request.cookies.get("user") %}
-        <a class="w3-button w3-red w3-right w3-margin" href="{{ url_for('register') }}">Registrieren</a>
+        <a class="w3-button w3-red w3-round w3-right w3-margin" href="{{ url_for('register') }}">Registrieren</a>
     {% endif %}
-    <h2><a onclick="sidebar_open()">☰</a> <a href="{{ url_for('index') }}">Roastbook &trade;</a></h2>
+    <h2><button class="w3-blue w3-round w3-button" onclick="sidebar_open()">☰</button> <a href="{{ url_for('index') }}">Roastbook &trade;</a></h2>
 </div>
 <div class="w3-container">
     {% block content %}

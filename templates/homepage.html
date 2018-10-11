@@ -9,7 +9,7 @@
     }, false);
 </script>
 <div class="w3-container w3-quarter w3-border w3-light-grey tab ranking">
-    <p class="w3-center w3-grey w3-padding">Die Besten 25</p>
+    <p class="w3-center w3-grey w3-padding">Die Besten 5</p>
     {% for user in top_user %}
         <div class="w3-card w3-padding w3-margin w3-green">
             <a href="{{ url_for('user', username=user[0]) }}">{{ user[0] }}<span class="w3-right">{{ user[1] }}</span></a>
@@ -35,7 +35,7 @@
     {% endfor %}
 </div>
 <div class="w3-container w3-quarter w3-border w3-light-grey tab ranking">
-    <p class="w3-center w3-grey w3-padding">Die Schlechtesten 25</p>
+    <p class="w3-center w3-grey w3-padding">Die Schlechtesten 5</p>
     {% for user in top_roast %}
         <div class="w3-card w3-margin w3-padding w3-red">
             <a href="{{ url_for('user', username=user[0]) }}">{{ user[0] }}<span class="w3-right">{{ user[1] }}</span></a>
