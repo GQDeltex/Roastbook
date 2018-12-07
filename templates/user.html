@@ -6,21 +6,23 @@
             term = element.value
             options = document.getElementById("name_select")
             all_names = "{{ all_names }}".replace(/&#34;/g, '"')
-            console.log(all_names)
             all_names = JSON.parse(all_names)
             options.innerHTML = ""
-            for (name of all_names) {
+            for (i in all_names) {
+                //console.log(all_names[i])
+                name = all_names[i].username
+                name_id = all_names[i].id
+                //console.log(name)
                 if (name.search(term) != -1){
-                    options.innerHTML += ("<option value='" + name + "'>" + name + "</option")
+                    options.innerHTML += ("<option value='" + name_id + "'>" + name + "</option")
                 }
             }
         }
     </script>
     <h2>Profil:{% if request.cookies.get("user") %}<a class="w3-button w3-blue w3-right w3-large" href="{{ url_for('login') }}">Logout</a>{% endif %}</h2>
-    <h2 class="w3-serif w3-dark-grey w3-padding w3-text-white"> {{ user[0] }}</h2>
-    <p>Balance: {{ user[2] }}</p>
-    <p>Level: {{ user[3] }}</p>
-    {% if request.cookies.get("user") == user[0] %}
+    <h2 class="w3-serif w3-dark-grey w3-padding w3-text-white"> {{ user['username'] }}</h2>
+    <p>Balance: {{ user['balance'] }}</p>
+    {% if request.cookies.get("user") == user['username'] %}
     <form action="{{ url_for('newpost') }}" method="POST">
         <label>Roast</label>
         <input name="text" class="w3-input w3-border-0" type="text" required placeholder="Deinen Roast bitte.....">
@@ -35,15 +37,15 @@
 <div class="w3-container w3-rest w3-light-grey w3-border">
     {% for roast in posts %}
         <div class="w3-card w3-padding w3-margin w3-white">
-            <span class="w3-left">#{{ roast[0] }}</span>
-            <span class="w3-right">Von: <b><a href="{{ url_for('user', username=roast[4]) }}">{{ roast[4] }}</a></b></span></br>
-            <span class="w3-right">An: <b><a href="{{ url_for('user', username=roast[5]) }}">{{ roast[5] }}</a></b></span></br>
-            <p class="w3-panel w3-leftbar w3-serif w3-xlarge w3-light-grey">{{ roast[1] }}</p>
+            <span class="w3-left">#{{ roast['id'] }}</span>
+            <span class="w3-right">Von: <b><a href="{{ url_for('user', username=roast['from']) }}">{{ roast['from'] }}</a></b></span></br>
+            <span class="w3-right">An: <b><a href="{{ url_for('user', username=roast['to']) }}">{{ roast['to'] }}</a></b></span></br>
+            <p class="w3-panel w3-leftbar w3-serif w3-xlarge w3-light-grey">{{ roast['text'] }}</p>
             <div class="w3-container">
-                <div class="w3-green w3-half" style="width:{{ roast[7] }}%">{% if request.cookies.get("user") == roast[4] or not request.cookies.get("user") %}<span class="w3-button w3-green w3-quarter w3-left">{{ roast[2] }}&#x1F44D;</span>{% else %}<a href="{{ url_for('upvote') }}?id={{ roast[0] }}&source={{ url_for('user', username=user[0]) }}" class="w3-button w3-green w3-quarter w3-left">{{ roast[2] }}&#x1F44D;</a>{% endif %}</div>
-                <div class="w3-red w3-half" style="width:{{ roast[6] }}%">{% if request.cookies.get("user") == roast[4] or not request.cookies.get("user") %}<span class="w3-button w3-red w3-quarter w3-right">{{ roast[3] }}&#x1F44E;</span>{% else %}<a href="{{ url_for('downvote') }}?id={{ roast[0] }}&source={{ url_for('user', username=user[0]) }}" class="w3-button w3-red w3-quarter w3-right">{{ roast[3] }}&#x1F44E;</a>{% endif %}</div>
+                <div class="w3-green w3-half" style="width:{{ roast['up_perc'] }}%">{% if request.cookies.get("user") == roast['from'] or not request.cookies.get("user") %}<span class="w3-button w3-green w3-quarter w3-left">{{ roast['upvote'] }}&#x1F44D;</span>{% else %}<a href="{{ url_for('upvote') }}?id={{ roast['id'] }}" class="w3-button w3-green w3-quarter w3-left">{{ roast['upvote'] }}&#x1F44D;</a>{% endif %}</div>
+                <div class="w3-red w3-half" style="width:{{ roast['down_perc'] }}%">{% if request.cookies.get("user") == roast['from'] or not request.cookies.get("user") %}<span class="w3-button w3-red w3-quarter w3-right">{{ roast['downvote'] }}&#x1F44E;</span>{% else %}<a href="{{ url_for('downvote') }}?id={{ roast['id'] }}" class="w3-button w3-red w3-quarter w3-right">{{ roast['downvote'] }}&#x1F44E;</a>{% endif %}</div>
             </div>
-            {% if request.cookies.get("user") == roast[4] %}<a href="{{ url_for('edit_post', id=roast[0]) }}">Post editieren</a>{% endif %}
+            {% if request.cookies.get("user") == roast['from'] %}<a href="{{ url_for('edit_post', id=roast['id']) }}">Post editieren</a>{% endif %}
             <a onclick="alert('Noch nicht implementiert :(')" class="w3-right">Post melden</a>
             <br>
         </div>

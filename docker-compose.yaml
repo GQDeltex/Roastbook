@@ -1,0 +1,10 @@
+version: '3.0'
+services:
+  rethinkdb:
+    image: rethinkdb
+  roastbook:
+    image: gqdeltex/nginx-uwsgi-alpine
+    volumes:
+      - ./:/app/
+    ports:
+      - 80:80

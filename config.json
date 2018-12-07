@@ -1,0 +1,5 @@
+{
+    "host": "rethinkdb",
+    "user": "admin",
+    "password": ""
+}
