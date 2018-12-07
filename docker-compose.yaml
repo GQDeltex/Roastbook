@@ -5,6 +5,6 @@ services:
   roastbook:
     image: gqdeltex/nginx-uwsgi-alpine
     volumes:
-      - ./:/app/
+      - ./:/app/:ro
     ports:
       - 80:80
