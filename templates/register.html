@@ -4,12 +4,12 @@
 
 <label>Benutzername</label>
 <label class="w3-right">Erlaubte Buchstaben: a-zA-Z0-9!@#$%^*_| </label>
-<input name="username" class="w3-input w3-border-0" type="text" maxlength="20" pattern="[a-zA-Z0-9!@#$%^*_|]{0,20}" required>
+<input name="username" class="w3-input w3-border-0" type="text" maxlength="20" pattern="[a-zA-Z0-9!@#$%^*_| ]{0,20}" required>
 <label>Passwort</label>
-<input name="password" class="w3-input w3-border-0" type="password" maxlength="20" pattern="[a-zA-Z0-9!@#$%^*_|]{5,20}" required>
+<input name="password" class="w3-input w3-border-0" type="password" maxlength="20" pattern="[a-zA-Z0-9!@#$%^*_| ]{5,20}" required>
 <label class="w3-right">Erlaubte Buchstaben: a-zA-Z0-9!@#$%^*_|          Passwort muss mindestens 5 Zeichen lang sein!</label>
 <label>Passwort wiederholen</label>
-<input name="password_repeat" class="w3-input w3-border-0" type="password" pattern="[a-zA-Z0-9!@#$%^*_|]{5,20}" required>
+<input name="password_repeat" class="w3-input w3-border-0" type="password" pattern="[a-zA-Z0-9!@#$%^*_| ]{5,20}" required>
 <p class="w3-text-red">{{ error }}</p>
 Wenn du dich registrierst akzeptierst du unsere <a href="{{ url_for('agb') }}">AGB</a>
 <button class="w3-button w3-red w3-right w3-margin">Get Roasted!</button>

@@ -16,12 +16,12 @@ c = conn.cursor()
 
 @app.route("/")
 def index():
-    top_user_raw = get_data("SELECT username, balance FROM users ORDER BY balance DESC LIMIT 25")
+    top_user_raw = get_data("SELECT username, balance FROM users ORDER BY balance DESC LIMIT 5")
     top_user = []
     for item in top_user_raw:
         top_user.append([(list(item)[0]), str(list(item)[1])])
     #print("Top Users: " + str(top_user))
-    top_roast_raw = get_data("SELECT username, balance FROM users ORDER BY balance ASC LIMIT 25")
+    top_roast_raw = get_data("SELECT username, balance FROM users ORDER BY balance ASC LIMIT 5")
     top_roast = []
     for item in top_roast_raw:
         top_roast.append([(list(item)[0]), str(list(item)[1])])
@@ -143,13 +143,14 @@ def edit_post(id):
 
 @app.route("/upvote")
 def upvote():
-    if request.cookies.get("user") == "":
+    user = request.cookies.get("user")
+    if user == "":
         return "You are not allowed to do this!\r\n<a href='" + url_for('index') + "'>Back to Homepage</a>"
     id = int(request.args.get("id"))
     source = request.args.get("source", default=url_for("index"))
     username, upvote, = get_data("SELECT user, upvote FROM posts WHERE id=?", int(id))[0]
     balance, = get_data("SELECT balance FROM users WHERE username=?", str(username))[0]
-    liked, = get_data("SELECT liked FROM users WHERE username=?", str(request.cookies.get("user")))[0]
+    liked, = get_data("SELECT liked FROM users WHERE username=?", user)[0]
     if liked != None:
         if liked.find(", " + str(id) + ", ") != -1:
             return redirect(source)
@@ -157,25 +158,26 @@ def upvote():
         liked = ", "
     liked += (str(id) + ", ")
     #print (str(liked))
-    print (str(username) + " liked post nr. " + str(id))
+    print (user + " liked post nr. " + str(id))
     balance += 1
     upvote += 1
     print ("Balance of %s changed from %d to %d" % (username, balance-1, balance))
     c.execute("UPDATE users SET balance=? WHERE username=?", (balance, username))
-    c.execute("UPDATE users SET liked=? WHERE username=?", (liked, request.cookies.get("user")))
+    c.execute("UPDATE users SET liked=? WHERE username=?", (liked, user))
     c.execute("UPDATE posts SET upvote=? WHERE id=?", (upvote, id))
     conn.commit()
     return redirect(source)
 
 @app.route("/downvote")
 def downvote():
-    if request.cookies.get("user") == "":
+    user = request.cookies.get("user")
+    if user == "":
         return "You are not allowed to do this!\r\n<a href='" + url_for('index') + "'>Back to Homepage</a>"
     id = int(request.args.get("id"))
     source = request.args.get("source", default=url_for("index"))
-    username, downvote, = get_data("SELECT user, downvote FROM posts WHERE id=?", int(id))[0]
+    username, downvote = get_data("SELECT user,downvote FROM posts WHERE id=?", int(id))[0]
     balance, = get_data("SELECT balance FROM users WHERE username=?", str(username))[0]
-    liked, = get_data("SELECT liked FROM users WHERE username=?", str(request.cookies.get("user")))[0]
+    liked, = get_data("SELECT liked FROM users WHERE username=?", user)[0]
     if liked != None:
         if liked.find(", " + str(id) + ", ") != -1:
             return redirect(source)
@@ -183,12 +185,12 @@ def downvote():
         liked = ", "
     liked += (str(id) + ", ")
     #print str(liked)
-    print (str(username) + " disliked post nr. " + str(id))
+    print (user + " disliked post nr. " + str(id))
     balance -= 1
     downvote += 1
     print ("Balance of %s changed from %d to %d" % (username, balance+1, balance))
     c.execute("UPDATE users SET balance=? WHERE username=?", (balance, username))
-    c.execute("UPDATE users SET liked=? WHERE username=?", (liked, request.cookies.get("user")))
+    c.execute("UPDATE users SET liked=? WHERE username=?", (liked, user))
     c.execute("UPDATE posts SET downvote=? WHERE id=?", (downvote, id))
     conn.commit()
     return redirect(source)
