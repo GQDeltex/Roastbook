@@ -1,0 +1,25 @@
+{
+  "name": "roastbook",
+  "version": "1.0.0",
+  "description": "A (Anti) Social Network",
+  "main": "index.js",
+  "dependencies": {
+    "socket.io": "^2.2.0",
+    "vue": "^2.5.18",
+    "w3css": "^2.7.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GQDeltex/Roastbook.git"
+  },
+  "author": "gqdeltex",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/GQDeltex/Roastbook/issues"
+  },
+  "homepage": "https://github.com/GQDeltex/Roastbook#readme"
+}

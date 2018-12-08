@@ -1,47 +1,10 @@
 <html>
 <head>
-    <link rel="stylesheet" href="{{ url_for('static', filename='w3.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='w3css/w3.css') }}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script>
-        var w = window,
-        d = document,
-        e = d.documentElement,
-        g = d.getElementsByTagName('body')[0],
-        x = w.innerWidth || e.clientWidth || g.clientWidth,
-        y = w.innerHeight|| e.clientHeight|| g.clientHeight;
-
-        function sidebar_open() {
-            sdb = document.getElementById("sidebar")
-            if (x > 601){
-                sdb.style.width = "25%"
-            } else {
-                sdb.style.width = "100%"
-            }
-            sdb.style.display = "block"
-        }
-
-        function sidebar_close() {
-            document.getElementById("sidebar").style.display = "none"
-        }
-
-        function open_tab(tab_name){
-            var i, g
-            g = document.getElementsByClassName("tab")
-            console.log("All Tabs:")
-            console.log(g);
-            for (i = 0; i < g.length; i++) {
-                g[i].style.display = "none"
-            }
-            g = document.getElementsByClassName(tab_name)
-            console.log("Tabs to render:")
-            console.log(g);
-            for (i = 0; i < g.length; i++) {
-                g[i].style.display = "block"
-            }
-            document.getElementById("sidebar").style.display = "none"
-        }
-    </script>
+    <script src="{{ url_for('static', filename='vue/dist/vue.js') }}"></script>
+    <script src="{{ url_for('static', filename='socket.io-client/dist/socket.io.dev.js') }}"></script>
 </head>
 <body>
 <div class="w3-sidebar w3-bar-block w3-card w3-animate-left" style="display:none" id="sidebar">
@@ -69,5 +32,44 @@
     {% block content %}
     {% endblock content %}
 </div>
+<script>
+    var w = window,
+    d = document,
+    e = d.documentElement,
+    g = d.getElementsByTagName('body')[0],
+    x = w.innerWidth || e.clientWidth || g.clientWidth,
+    y = w.innerHeight|| e.clientHeight|| g.clientHeight;
+
+    function sidebar_open() {
+        sdb = document.getElementById("sidebar")
+        if (x > 601){
+            sdb.style.width = "25%"
+        } else {
+            sdb.style.width = "100%"
+        }
+        sdb.style.display = "block"
+    }
+
+    function sidebar_close() {
+        document.getElementById("sidebar").style.display = "none"
+    }
+
+    function open_tab(tab_name){
+        var i, g
+        g = document.getElementsByClassName("tab")
+        console.log("All Tabs:")
+        console.log(g);
+        for (i = 0; i < g.length; i++) {
+            g[i].style.display = "none"
+        }
+        g = document.getElementsByClassName(tab_name)
+        console.log("Tabs to render:")
+        console.log(g);
+        for (i = 0; i < g.length; i++) {
+            g[i].style.display = "block"
+        }
+        document.getElementById("sidebar").style.display = "none"
+    }
+</script>
 </body>
 </html>

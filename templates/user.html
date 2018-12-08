@@ -1,54 +1,93 @@
 {% extends "main.html" %}
 {% block content %}
 <div class="w3-container w3-third w3-light-grey w3-border">
-    <script>
-        function update_names(element){
-            term = element.value
-            options = document.getElementById("name_select")
-            all_names = "{{ all_names }}".replace(/&#34;/g, '"')
-            all_names = JSON.parse(all_names)
-            options.innerHTML = ""
-            for (i in all_names) {
-                //console.log(all_names[i])
-                name = all_names[i].username
-                name_id = all_names[i].id
-                //console.log(name)
-                if (name.search(term) != -1){
-                    options.innerHTML += ("<option value='" + name_id + "'>" + name + "</option")
-                }
-            }
-        }
-    </script>
     <h2>Profil:{% if request.cookies.get("user") %}<a class="w3-button w3-blue w3-right w3-large" href="{{ url_for('login') }}">Logout</a>{% endif %}</h2>
     <h2 class="w3-serif w3-dark-grey w3-padding w3-text-white"> {{ user['username'] }}</h2>
-    <p>Balance: {{ user['balance'] }}</p>
-    {% if request.cookies.get("user") == user['username'] %}
-    <form action="{{ url_for('newpost') }}" method="POST">
-        <label>Roast</label>
-        <input name="text" class="w3-input w3-border-0" type="text" required placeholder="Deinen Roast bitte.....">
-        <label>Name</label>
-        <input class="w3-input w3-border-0" type="text" onkeyup="update_names(this)" placeholder="Tippen für vorschläge" pattern="[a-zA-Z0-9!@#$%^*_|]{0,20}">
-        <select id="name_select" class="w3-select w3-border-0" name="username" required>
-        </select>
-        <button class="w3-button w3-green w3-right w3-margin">Roaste ihn!</button>
-    </form>
-    {% endif %}
+    <div id="vue_all_names">
+        <p>Balance: {{ user['balance'] }}</p>
+        <form v-if="user_id == profile" action="{{ url_for('newpost') }}" method="POST">
+            <label>Roast</label>
+            <input name="text" class="w3-input w3-border-0" type="text" required placeholder="Deinen Roast bitte.....">
+            <label>Name</label>
+            <input class="w3-input w3-border-0" type="text" v-on:keyup="update_names()" v-model="term" placeholder="Tippen für vorschläge" pattern="[a-zA-Z0-9!@#$%^*_|]{0,20}">
+            <select id="name_select" class="w3-select w3-border-0" name="username" required>
+                <option v-for="name in used_names" :value="name.id" v-html="name.username"></option>
+            </select>
+            <button class="w3-button w3-green w3-right w3-margin">Roaste ihn!</button>
+        </form>
+    </div>
 </div>
-<div class="w3-container w3-rest w3-light-grey w3-border">
-    {% for roast in posts %}
-        <div class="w3-card w3-padding w3-margin w3-white">
-            <span class="w3-left">#{{ roast['id'] }}</span>
-            <span class="w3-right">Von: <b><a href="{{ url_for('user', username=roast['from']) }}">{{ roast['from'] }}</a></b></span></br>
-            <span class="w3-right">An: <b><a href="{{ url_for('user', username=roast['to']) }}">{{ roast['to'] }}</a></b></span></br>
-            <p class="w3-panel w3-leftbar w3-serif w3-xlarge w3-light-grey">{{ roast['text'] }}</p>
-            <div class="w3-container">
-                <div class="w3-green w3-half" style="width:{{ roast['up_perc'] }}%">{% if request.cookies.get("user") == roast['from'] or not request.cookies.get("user") %}<span class="w3-button w3-green w3-quarter w3-left">{{ roast['upvote'] }}&#x1F44D;</span>{% else %}<a href="{{ url_for('upvote') }}?id={{ roast['id'] }}" class="w3-button w3-green w3-quarter w3-left">{{ roast['upvote'] }}&#x1F44D;</a>{% endif %}</div>
-                <div class="w3-red w3-half" style="width:{{ roast['down_perc'] }}%">{% if request.cookies.get("user") == roast['from'] or not request.cookies.get("user") %}<span class="w3-button w3-red w3-quarter w3-right">{{ roast['downvote'] }}&#x1F44E;</span>{% else %}<a href="{{ url_for('downvote') }}?id={{ roast['id'] }}" class="w3-button w3-red w3-quarter w3-right">{{ roast['downvote'] }}&#x1F44E;</a>{% endif %}</div>
-            </div>
-            {% if request.cookies.get("user") == roast['from'] %}<a href="{{ url_for('edit_post', id=roast['id']) }}">Post editieren</a>{% endif %}
-            <a onclick="alert('Noch nicht implementiert :(')" class="w3-right">Post melden</a>
-            <br>
+<div id="vue_top_posts" class="w3-container w3-half w3-border w3-light-grey tab posts">
+    <p class="w3-center w3-grey w3-padding">Letzte Roasts</p>
+    <div v-for="roast in post" v-if="roast.from_id == user_id || roast.to_id == user_id" class="w3-card w3-padding w3-margin w3-white">
+        <span class="w3-left" v-html="'#' + roast.time"></span>
+        <span class="w3-right">Von: <b><a :href="'/user/' + roast.from" v-html="roast.from"></a></b></span></br>
+        <span class="w3-right">An: <b><a :href="'/user/' + roast.to" v-html="roast.to"></a></b></span></br>
+        <p class="w3-panel w3-leftbar w3-serif w3-xlarge w3-light-grey" v-html="roast.text"></p>
+        <div class="w3-container">
+            <div class="w3-green w3-half" v-bind:style="{ width: roast.up_perc + '%' }"><button class="w3-button w3-green w3-left" :disabled="user_id == '' || user_id == roast.from_id" v-html="roast.upvote + '&#x1F44D;'" v-on:click="like_post(roast.id)"></button></div>
+            <div class="w3-red w3-half" v-bind:style="{ width: roast.down_perc + '%' }"><button class="w3-button w3-red w3-right" :disabled="user_id == '' || user_id == roast.from_id" v-html="roast.downvote + '&#x1F44E;'" v-on:click="dislike_post(roast.id)"></button></div>
         </div>
-    {% endfor %}
+        <a v-if="user_id==roast.from_id" v-bind:href="'/edit_post/' + roast.id">Post editieren</a>
+        <a onclick="alert('Noch nicht implementiert :(')" class="w3-right">Post melden</a>
+        <br>
+    </div>
 </div>
+<script>
+    var vue_top_posts = new Vue({
+        el: '#vue_top_posts',
+        data: {
+            post:[],
+            user_id: "{{ request.cookies.get('user_id') }}",
+            user: "{{ request.cookies.get('user') }}"
+        },
+        methods: {
+            like_post: function(post_id){
+                console.log("liked: " + post_id)
+                socket.emit('upvote', {post_id:post_id, user_id:vue_top_posts.user_id})
+            },
+            dislike_post: function(post_id){
+                console.log("disliked: " + post_id)
+                socket.emit('downvote', {post_id:post_id, user_id:vue_top_posts.user_id})
+            }
+        }
+    })
+    var vue_all_names = new Vue({
+        el: '#vue_all_names',
+        data: {
+            all_names: [],
+            used_names: [],
+            term: '',
+            user_id: "{{ request.cookies.get('user_id') }}",
+            user: "{{ request.cookies.get('user') }}",
+            profile: "{{ profile }}"
+        },
+        methods: {
+            update_names: function(){
+                this.used_names = this.all_names.filter(function(element, index, array){
+                    if (element.username.search(vue_all_names.term) != -1) {
+                        return true
+                    } else {
+                        return false
+                    }
+                })
+            }
+        }
+    })
+    var socket = io()
+    socket.on('connect', function(data){
+        console.log('Socket connected!')
+        socket.on('post', function(data){
+            console.log(data)
+            vue_top_posts.post = data
+        })
+        socket.on('all_names', function(data){
+            console.log(data)
+            vue_all_names.all_names = data
+        })
+        socket.on('disconnect', function(data){
+            console.log('Socket disconnected')
+        })
+    })
+</script>
 {% endblock content %}

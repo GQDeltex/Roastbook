@@ -3,6 +3,8 @@ from flask import Flask, request, redirect, url_for, render_template, make_respo
 import rethinkdb as r
 import json
 import hashlib
+import socketio
+from multiprocessing import Process
 
 config = {
     'host':'localhost',
@@ -13,9 +15,12 @@ config = {
 with open('config.json') as f:
     config = json.loads(f.read())
 
-app = Flask(__name__)
+sio = socketio.Server()
+app = Flask(__name__, static_folder="node_modules")
+app.wsgi_app = socketio.Middleware(sio, app.wsgi_app)
+
 connection = r.connect(host=config['host'], user=config['user'], password=config['password'], db='roastbook').repl()
-print(connection.server())
+print("host: %s, user: %s" % (config['host'], config['user']), connection.server())
 #r.db_create('roastbook').run()
 connection.use('roastbook')
 #r.table_drop('users').run()
@@ -25,28 +30,31 @@ connection.use('roastbook')
 #r.table('users').update({'liked':[]}).run()
 #r.table('users').index_create('username').run()
 
+@sio.on('connect')
+def connect(sid, environ):
+    print("connect ", sid)
+    sio.emit('post', data=r.table('posts').order_by(r.desc('time')).limit(100).run(connection))
+    sio.emit('top_user', data=r.table('users').order_by(r.desc('balance')).limit(5).pluck(['username', 'balance']).run(connection))
+    sio.emit('top_roast', data=r.table('users').order_by(r.asc('balance')).limit(5).pluck(['username', 'balance']).run(connection))
+    sio.emit('all_names', data=r.table('users').pluck('username', 'id').coerce_to('array').run(connection))
+
+@sio.on('disconnect')
+def disconnect(sid):
+    print("disconnect ", sid)
+
+@sio.on('upvote')
+def Interactive_upvote(sid, environ=''):
+    print("Interactive Upvote", sid, environ)
+    vote(1, environ)
+
+@sio.on('downvote')
+def interactive_downvote(sid, environ=''):
+    print("Interactive Downvote", sid, environ)
+    vote(-1, environ)
+
 @app.route("/")
 def index():
-    top_user = r.table('users').order_by(r.desc('balance')).limit(5).pluck(['username', 'balance']).run(connection)
-    #print("Top Users: " + str(top_user))
-    top_roast = r.table('users').order_by(r.asc('balance')).limit(5).pluck(['username', 'balance']).run(connection)
-    #print("Top Roasted: " + str(top_roast))
-    top_post = r.table('posts').order_by(r.desc('id')).limit(100).run(connection)
-    #print("Top Posts: " + str(top_post))
-    for post in top_post:
-        if (post['upvote']+post['downvote']) != 0:
-            post['up_perc'] = (post['upvote']/(post['upvote']+post['downvote']))*100
-            post['down_perc'] = (post['downvote']/(post['upvote']+post['downvote']))*100
-        else:
-            post['up_perc'] = 50
-            post['down_perc'] = 50
-        if post['up_perc'] < 10:
-            post['up_perc'] = 10
-            post['down_perc'] = 90
-        if post['down_perc'] < 10:
-            post['down_perc'] = 10
-            post['up_perc'] = 90
-    return render_template("homepage.html", top_user=top_user, top_roast=top_roast, top_post=top_post)
+    return render_template("homepage.html")
 
 @app.route("/login", methods=["POST", "GET"])
 def login():
@@ -104,22 +112,7 @@ def register():
 def user(username):
     data = r.table('users').get_all(username, index='username').coerce_to('array').run(connection)
     if len(data) == 1:
-        posts = r.table('posts').filter((r.row['from'] == username) | (r.row['to'] == username)).order_by(r.desc('id')).run(connection)
-        for post in posts:
-            if (post['upvote']+post['downvote']) != 0:
-                post['up_perc'] = (post['upvote']/(post['upvote']+post['downvote']))*100
-                post['down_perc'] = (post['downvote']/(post['upvote']+post['downvote']))*100
-            else:
-                post['up_perc'] = 50
-                post['down_perc'] = 50
-            if post['up_perc'] < 10:
-                post['up_perc'] = 10
-                post['down_perc'] = 90
-            if post['down_perc'] < 10:
-                post['down_perc'] = 10
-                post['up_perc'] = 90
-        all_names = json.dumps(r.table('users').pluck('username', 'id').coerce_to('array').run(connection))
-        return render_template("user.html", user=data[0], posts=posts, all_names=all_names)
+        return render_template("user.html", user=data[0], profile=data[0]['id'])
     else:
         return "Diesen Benutzer gibt es nicht!"
 
@@ -137,59 +130,70 @@ def edit_post(id):
 
 @app.route("/upvote")
 def upvote():
-    user = request.cookies.get("user")
     user_id = request.cookies.get("user_id")
-    if user == "":
+    if user_id == "":
         return "You are not allowed to do this!\r\n<a href='" + url_for('index') + "'>Back to Homepage</a>"
     id = request.args.get("id")
     source = request.args.get("source", default=url_for("index"))
-    data = r.table('posts').get(id).pluck('from_id', 'upvote').run(connection)
-    username, upvote = data['from_id'], data['upvote']
-    balance = r.table('users').get(username).pluck('balance').run(connection)['balance']
-    liked = r.table('users').get(user_id).pluck('liked').run(connection)['liked']
-    if liked != []:
-        if id in liked:
-            return redirect(source)
-    else:
-        liked = []
-    liked.append(id)
-    #print (str(liked))
-    print ("%s liked post %s" % (user, id))
-    balance += 1
-    upvote += 1
-    print ("Balance of %s changed from %d to %d" % (user_id, balance-1, balance))
-    r.table('users').get(user_id).update({'balance':balance}).run(connection)
-    r.table('users').get_all(user, index='username').update({'liked':liked}).run(connection)
-    r.table('posts').get(id).update({'upvote':upvote}).run(connection)
+    vote(1, {'user_id':user_id, 'post_id':id})
     return redirect(source)
 
 @app.route("/downvote")
 def downvote():
-    user = request.cookies.get("user")
     user_id = request.cookies.get("user_id")
-    if user == "":
+    if user_id == "":
         return "You are not allowed to do this!\r\n<a href='" + url_for('index') + "'>Back to Homepage</a>"
     id = request.args.get("id")
     source = request.args.get("source", default=url_for("index"))
-    data = r.table('posts').get(id).pluck('from_id', 'downvote').run(connection)
-    username, downvote = data['from_id'], data['downvote']
-    balance = r.table('users').get(username).pluck('balance').run(connection)['balance']
-    liked = r.table('users').get(user_id).pluck('liked').run(connection)['liked']
-    if liked != []:
-        if id in liked:
-            return redirect(source)
-    else:
-        liked = []
-    liked.append(id)
-    #print (str(liked))
-    print ("%s disliked post %s" % (user, id))
-    balance -= 1
-    downvote += 1
-    print ("Balance of %s changed from %d to %d" % (user_id, balance+1, balance))
-    r.table('users').get(user_id).update({'balance':balance}).run(connection)
-    r.table('users').get_all(user, index='username').update({'liked':liked}).run(connection)
-    r.table('posts').get(id).update({'downvote':downvote}).run(connection)
+    vote(-1, {'user_id':user_id, 'post_id':id})
     return redirect(source)
+
+
+def vote(amount, args):
+    user_id = args['user_id']
+    id = args['post_id']
+    if user_id == '':
+        return
+    post = r.table('posts').get(id).run(connection)
+    post_author = r.table('users').get(post['from_id']).run(connection)
+    post_liker = r.table('users').get(user_id).run(connection)
+    if post_liker['liked'] != []:
+        if id in post_liker['liked']:
+            print("Post already liked!")
+            return
+    else:
+        post_liker['liked'] = []
+    if amount > 0:
+        post['upvote'] += amount
+        post_author['balance'] += amount
+    else:
+        post['downvote'] += abs(amount)
+        post_author['balance'] += amount
+    if (post['upvote']+post['downvote']) != 0 and post['upvote'] != post['downvote']:
+        post['up_perc'] = (float(post['upvote'])/float(post['upvote']+post['downvote']))*100
+        post['down_perc'] = (float(post['downvote'])/float(post['upvote']+post['downvote']))*100
+    else:
+        post['up_perc'] = 50
+        post['down_perc'] = 50
+    print("Size before: ", post['up_perc'], post['down_perc'])
+    min_perc = 15
+    if post['up_perc'] < min_perc:
+        post['up_perc'] = min_perc
+        post['down_perc'] = 100-min_perc
+    if post['down_perc'] < min_perc:
+        post['down_perc'] = min_perc
+        post['up_perc'] = 100-min_perc
+    print("Size after: ", post['up_perc'], post['down_perc'])
+    post_liker['liked'].append(id)
+    #print (str(liked))
+    print ("%s liked post %s" % (post_liker['username'], id))
+    r.table('users').get(post_author['id']).update({'balance':post_author['balance']}).run(connection)
+    r.table('users').get(user_id).update({'liked':post_liker['liked']}).run(connection)
+    r.table('posts').get(id).update(post).run(connection)
+    sio.emit('post', data=r.table('posts').order_by(r.desc('time')).limit(100).run(connection))
+    sio.emit('top_user', data=r.table('users').order_by(r.desc('balance')).limit(5).pluck(['username', 'balance']).run(connection))
+    sio.emit('top_roast', data=r.table('users').order_by(r.asc('balance')).limit(5).pluck(['username', 'balance']).run(connection))
+    return
 
 @app.route("/newpost", methods=["POST"])
 def newpost():
@@ -200,7 +204,8 @@ def newpost():
     my_username = request.cookies.get("user")
     my_user_id = request.cookies.get("user_id")
     if r.table('users').get(user_id).pluck('id').count().run(connection) == 1:
-        r.table('posts').insert({'text':text, 'upvote':0, 'downvote':0, 'from':my_username, 'to':username, 'from_id':my_user_id, 'to_id':user_id}).run(connection)
+        r.table('posts').insert({'text':text, 'upvote':0, 'downvote':0, 'up_perc':50, 'down_perc':50, 'from':my_username, 'to':username, 'from_id':my_user_id, 'to_id':user_id, 'time':r.now().to_iso8601().run(connection)}).run(connection)
+        sio.emit('post', data=r.table('posts').order_by(r.desc('time')).limit(100).run(connection))
         return redirect(url_for('user', username=my_username))
     return user_id
 
@@ -217,4 +222,5 @@ def datenschutz():
     return render_template("datenschutz.html")
 
 if __name__ == '__main__':
-    app.run("0.0.0.0", port=8000)
+    import eventlet
+    eventlet.wsgi.server(eventlet.listen(('', 5000)), app)

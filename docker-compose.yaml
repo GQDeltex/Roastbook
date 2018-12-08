@@ -3,8 +3,9 @@ services:
   rethinkdb:
     image: rethinkdb
   roastbook:
-    image: gqdeltex/nginx-uwsgi-alpine
+    image: python:2
     volumes:
       - ./:/app/:ro
     ports:
-      - 80:80
+      - 80:5000
+    command: bash -c "/app/start.sh"
