@@ -6,7 +6,7 @@
   "dependencies": {
     "socket.io": "^2.2.0",
     "vue": "^2.5.18",
-    "w3css": "^2.7.0"
+    "w3-css": "^4.1.0"
   },
   "devDependencies": {},
   "scripts": {
