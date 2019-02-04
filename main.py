@@ -1,5 +1,5 @@
  # -*- coding: utf-8 -*-
-from flask import Flask, request, redirect, url_for, render_template, make_response, Markup
+from flask import Flask, request, redirect, url_for, render_template, make_response, Markup, send_file
 import rethinkdb as r
 import json
 import hashlib
@@ -19,16 +19,25 @@ sio = socketio.Server()
 app = Flask(__name__, static_folder="node_modules")
 app.wsgi_app = socketio.Middleware(sio, app.wsgi_app)
 
-connection = r.connect(host=config['host'], user=config['user'], password=config['password'], db='roastbook').repl()
+try:
+  connection = r.connect(host=config['host'], user=config['user'], password=config['password'], db='roastbook').repl()
+except ReqlAuthError:
+  connection = r.connect(host=config['host']).repl()
+  r.db('rethinkdb').table('users').insert({'id':config['user'], 'password':config['password']}).run(connection)
+  try:
+    connection = r.connect(host=config['host'], user=config['user'], password=config['password'], db='roastbook').repl()
+  except ReqlAuthError:
+    print("No Auth method worked, exiting...")
+    exit()
 print("host: %s, user: %s" % (config['host'], config['user']), connection.server())
-#r.db_create('roastbook').run()
+r.db_create('roastbook').run()
 connection.use('roastbook')
 #r.table_drop('users').run()
-#r.table_create('users').run()
+r.table_create('users').run()
 #r.table_drop('posts').run()
-#r.table_create('posts').run()
+r.table_create('posts').run()
 #r.table('users').update({'liked':[]}).run()
-#r.table('users').index_create('username').run()
+r.table('users').index_create('username').run()
 
 @sio.on('connect')
 def connect(sid, environ):
@@ -55,6 +64,10 @@ def interactive_downvote(sid, environ=''):
 @app.route("/")
 def index():
     return render_template("homepage.html")
+
+@app.route("/robots.txt")
+def robots():
+    return send_file('./robots.txt')
 
 @app.route("/login", methods=["POST", "GET"])
 def login():
