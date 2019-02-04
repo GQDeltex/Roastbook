@@ -1,10 +1,9 @@
  # -*- coding: utf-8 -*-
-from flask import Flask, request, redirect, url_for, render_template, make_response, Markup, send_file
-import rethinkdb as r
 import json
 import hashlib
 import socketio
-from multiprocessing import Process
+from flask import Flask, request, redirect, url_for, render_template, make_response, Markup, send_file
+import rethinkdb as r
 
 config = {
     'host':'localhost',
@@ -20,24 +19,22 @@ app = Flask(__name__, static_folder="node_modules")
 app.wsgi_app = socketio.Middleware(sio, app.wsgi_app)
 
 try:
-  connection = r.connect(host=config['host'], user=config['user'], password=config['password'], db='roastbook').repl()
+  connection = r.connect(host=config['host'], user=config['user'], password=config['password'], db='roastbook')
 except ReqlAuthError:
-  connection = r.connect(host=config['host']).repl()
+  connection = r.connect(host=config['host'])
   r.db('rethinkdb').table('users').insert({'id':config['user'], 'password':config['password']}).run(connection)
+  r.db_create('roastbook').run(connection)
+  r.db('roastbook').table_create('users').run(connection)
+  r.db('roastbook').table_create('posts').run(connection)
+  r.db('roastbook').table('users').index_create('username').run(connection)
+  r.db('roastbook').grant(config['user'], {'read':true, 'write':true, 'config':false})
   try:
-    connection = r.connect(host=config['host'], user=config['user'], password=config['password'], db='roastbook').repl()
+    connection = r.connect(host=config['host'], user=config['user'], password=config['password'], db='roastbook')
   except ReqlAuthError:
     print("No Auth method worked, exiting...")
     exit()
 print("host: %s, user: %s" % (config['host'], config['user']), connection.server())
-r.db_create('roastbook').run()
 connection.use('roastbook')
-#r.table_drop('users').run()
-r.table_create('users').run()
-#r.table_drop('posts').run()
-r.table_create('posts').run()
-#r.table('users').update({'liked':[]}).run()
-r.table('users').index_create('username').run()
 
 @sio.on('connect')
 def connect(sid, environ):
