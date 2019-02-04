@@ -11,38 +11,52 @@ config = {
     'password':''
 }
 
-with open('config.json') as f:
+with open('config.json', 'r') as f:
     config = json.loads(f.read())
+    print("Read Configuration file")
+
+try:
+    print("Connecting to Database")
+    connection = r.connect(host=config['host'], user=config['user'], password=config['password'], db='roastbook')
+except r.errors.ReqlAuthError:
+    print("%s user is not existing, performing database setup" % config['user'])
+    print("Connecting as default user")
+    try:
+        connection = r.connect(host=config['host'])
+    except r.errors.ReqlAuthError:
+        print("Auto-Setup failed, couldn't log in as default user")
+        print("Please set up the user, permission and tables yourself")
+        exit()
+    print("Creating User %s" % config['user'])
+    r.db('rethinkdb').table('users').insert({'id':config['user'], 'password':config['password']}).run(connection)
+    print("Creating Database")
+    r.db_create('roastbook').run(connection)
+    print("Creating Tables and secondary indexes")
+    r.db('roastbook').table_create('users').run(connection)
+    r.db('roastbook').table_create('posts').run(connection)
+    r.db('roastbook').table('users').index_create('username').run(connection)
+    print("Setting up permissions")
+    r.db('roastbook').grant(config['user'], {'read':True, 'write':True, 'config':False}).run(connection)
+    try:
+        print("Connecting with new user")
+        connection = r.connect(host=config['host'], user=config['user'], password=config['password'], db='roastbook')
+    except r.errors.ReqlAuthError as e:
+        print("New user didn't work, exiting...")
+        exit()
+print("Connected to Database!")
+print("host: %s, user: %s" % (config['host'], config['user']), connection.server())
 
 sio = socketio.Server()
 app = Flask(__name__, static_folder="node_modules")
 app.wsgi_app = socketio.Middleware(sio, app.wsgi_app)
 
-try:
-  connection = r.connect(host=config['host'], user=config['user'], password=config['password'], db='roastbook')
-except ReqlAuthError:
-  connection = r.connect(host=config['host'])
-  r.db('rethinkdb').table('users').insert({'id':config['user'], 'password':config['password']}).run(connection)
-  r.db_create('roastbook').run(connection)
-  r.db('roastbook').table_create('users').run(connection)
-  r.db('roastbook').table_create('posts').run(connection)
-  r.db('roastbook').table('users').index_create('username').run(connection)
-  r.db('roastbook').grant(config['user'], {'read':true, 'write':true, 'config':false})
-  try:
-    connection = r.connect(host=config['host'], user=config['user'], password=config['password'], db='roastbook')
-  except ReqlAuthError:
-    print("No Auth method worked, exiting...")
-    exit()
-print("host: %s, user: %s" % (config['host'], config['user']), connection.server())
-connection.use('roastbook')
-
 @sio.on('connect')
 def connect(sid, environ):
     print("connect ", sid)
-    sio.emit('post', data=r.table('posts').order_by(r.desc('time')).limit(100).run(connection))
-    sio.emit('top_user', data=r.table('users').order_by(r.desc('balance')).limit(5).pluck(['username', 'balance']).run(connection))
-    sio.emit('top_roast', data=r.table('users').order_by(r.asc('balance')).limit(5).pluck(['username', 'balance']).run(connection))
-    sio.emit('all_names', data=r.table('users').pluck('username', 'id').coerce_to('array').run(connection))
+    sio.emit('post', data=r.db('roastbook').table('posts').order_by(r.desc('time')).limit(100).run(connection))
+    sio.emit('top_user', data=r.db('roastbook').table('users').order_by(r.desc('balance')).limit(5).pluck(['username', 'balance']).run(connection))
+    sio.emit('top_roast', data=r.db('roastbook').table('users').order_by(r.asc('balance')).limit(5).pluck(['username', 'balance']).run(connection))
+    sio.emit('all_names', data=r.db('roastbook').table('users').pluck('username', 'id').coerce_to('array').run(connection))
 
 @sio.on('disconnect')
 def disconnect(sid):
@@ -72,7 +86,7 @@ def login():
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
-        user_data = r.table('users').get_all(username, index='username').coerce_to('array').run(connection)
+        user_data = r.db('roastbook').table('users').get_all(username, index='username').coerce_to('array').run(connection)
         if len(user_data) == 0:
             error = "Nutzer nicht gefunden!"
         elif len(user_data) > 1:
@@ -104,13 +118,13 @@ def register():
         username = str(Markup.escape(request.form["username"]))
         password = request.form["password"]
         password_repeat = request.form["password_repeat"]
-        if r.table('users').filter({'username':username}).count().run(connection) != 0:
+        if r.db('roastbook').table('users').filter({'username':username}).count().run(connection) != 0:
             error = "Ein Benutzer mit deinem Benutzernamen existiert bereits, suche dir einen anderen aus."
         elif password != password_repeat:
             error = "Die beiden eingegebenen Passwoerter stimmen nicht ueberein!"
         else:
             pwd_hash = hashlib.sha256(username + password).hexdigest()
-            user_id = r.table('users').insert({'username':username, 'password':pwd_hash, 'balance':0, 'liked':[]}).run(connection)['generated_keys'][0]
+            user_id = r.db('roastbook').table('users').insert({'username':username, 'password':pwd_hash, 'balance':0, 'liked':[]}).run(connection)['generated_keys'][0]
             print ("New User: %s, id: %s" % (username, user_id))
             resp = make_response(redirect(url_for("user", username=username)))
             resp.set_cookie("user", value=username)
@@ -120,7 +134,7 @@ def register():
 
 @app.route("/users/<username>")
 def user(username):
-    data = r.table('users').get_all(username, index='username').coerce_to('array').run(connection)
+    data = r.db('roastbook').table('users').get_all(username, index='username').coerce_to('array').run(connection)
     if len(data) == 1:
         return render_template("user.html", user=data[0], profile=data[0]['id'])
     else:
@@ -128,12 +142,12 @@ def user(username):
 
 @app.route("/edit_post/<id>", methods=["GET", "POST"])
 def edit_post(id):
-    data = r.table('posts').get(id).run(connection)
+    data = r.db('roastbook').table('posts').get(id).run(connection)
     if request.cookies.get("user_id") != data['from_id']:
         return "You are not allowed to do this!\r\n<a href='" + url_for('index') + "'>Back to Homepage</a>"
     if request.method == "POST":
         text = str(Markup.escape(request.form['text']))
-        r.table('posts').get(id).update({'text':text}).run(connection)
+        r.db('roastbook').table('posts').get(id).update({'text':text}).run(connection)
         return redirect(url_for('user', username=request.cookies.get("user")))
     else:
         return render_template("edit.html", data=data)
@@ -164,9 +178,9 @@ def vote(amount, args):
     id = args['post_id']
     if user_id == '':
         return
-    post = r.table('posts').get(id).run(connection)
-    post_author = r.table('users').get(post['from_id']).run(connection)
-    post_liker = r.table('users').get(user_id).run(connection)
+    post = r.db('roastbook').table('posts').get(id).run(connection)
+    post_author = r.db('roastbook').table('users').get(post['from_id']).run(connection)
+    post_liker = r.db('roastbook').table('users').get(user_id).run(connection)
     if post_liker['liked'] != []:
         if id in post_liker['liked']:
             print("Post already liked!")
@@ -197,25 +211,25 @@ def vote(amount, args):
     post_liker['liked'].append(id)
     #print (str(liked))
     print ("%s liked post %s" % (post_liker['username'], id))
-    r.table('users').get(post_author['id']).update({'balance':post_author['balance']}).run(connection)
-    r.table('users').get(user_id).update({'liked':post_liker['liked']}).run(connection)
-    r.table('posts').get(id).update(post).run(connection)
-    sio.emit('post', data=r.table('posts').order_by(r.desc('time')).limit(100).run(connection))
-    sio.emit('top_user', data=r.table('users').order_by(r.desc('balance')).limit(5).pluck(['username', 'balance']).run(connection))
-    sio.emit('top_roast', data=r.table('users').order_by(r.asc('balance')).limit(5).pluck(['username', 'balance']).run(connection))
+    r.db('roastbook').table('users').get(post_author['id']).update({'balance':post_author['balance']}).run(connection)
+    r.db('roastbook').table('users').get(user_id).update({'liked':post_liker['liked']}).run(connection)
+    r.db('roastbook').table('posts').get(id).update(post).run(connection)
+    sio.emit('post', data=r.db('roastbook').table('posts').order_by(r.desc('time')).limit(100).run(connection))
+    sio.emit('top_user', data=r.db('roastbook').table('users').order_by(r.desc('balance')).limit(5).pluck(['username', 'balance']).run(connection))
+    sio.emit('top_roast', data=r.db('roastbook').table('users').order_by(r.asc('balance')).limit(5).pluck(['username', 'balance']).run(connection))
     return
 
 @app.route("/newpost", methods=["POST"])
 def newpost():
     text = str(Markup.escape(request.form['text']))
     user_id = request.form['username']
-    username = r.table('users').get(user_id).pluck('username').run(connection)['username']
+    username = r.db('roastbook').table('users').get(user_id).pluck('username').run(connection)['username']
     print("Created Post:" + str(username))
     my_username = request.cookies.get("user")
     my_user_id = request.cookies.get("user_id")
-    if r.table('users').get(user_id).pluck('id').count().run(connection) == 1:
-        r.table('posts').insert({'text':text, 'upvote':0, 'downvote':0, 'up_perc':50, 'down_perc':50, 'from':my_username, 'to':username, 'from_id':my_user_id, 'to_id':user_id, 'time':r.now().to_iso8601().run(connection)}).run(connection)
-        sio.emit('post', data=r.table('posts').order_by(r.desc('time')).limit(100).run(connection))
+    if r.db('roastbook').table('users').get(user_id).pluck('id').count().run(connection) == 1:
+        r.db('roastbook').table('posts').insert({'text':text, 'upvote':0, 'downvote':0, 'up_perc':50, 'down_perc':50, 'from':my_username, 'to':username, 'from_id':my_user_id, 'to_id':user_id, 'time':r.now().to_iso8601().run(connection)}).run(connection)
+        sio.emit('post', data=r.db('roastbook').table('posts').order_by(r.desc('time')).limit(100).run(connection))
         return redirect(url_for('user', username=my_username))
     return user_id
 
